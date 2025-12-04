@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<launch>
+  <!--
+    CSSR System - Jetson Launch File
+
+    This launch file runs on the Jetson Nano/Xavier attached to the robot.
+    It launches:
+    1. Intel RealSense camera
+    2. Face detection node (with virtual environment)
+
+    Prerequisites:
+    - ROS workspace sourced
+    - ROS_MASTER_URI configured to point to the computer's ROS master
+    - Virtual environment for face detection installed
+  -->
+
+  <!-- Network Configuration -->
+  <arg name="ros_master_ip"                       default="172.29.111.237" doc="IP address of the computer running roscore" />
+  <arg name="jetson_ip"                           default="172.29.111.240" doc="IP address of this Jetson" />
+
+  <!-- Virtual Environment Path -->
+  <arg name="face_person_detection_env_path"      default="~/workspace/pepper_rob_ws/src/cssr4africa_virtual_envs/cssr4africa_face_person_detection_env" />
+
+  <!-- Node Configuration -->
+  <arg name="face_detection_namespace"            default="faceDetection" />
+  <arg name="cssr_system_namespace"               default="cssr_system" />
+
+  <!-- Camera Parameters -->
+  <arg name="camera_type"                         default="realsense" />
+  <arg name="color_width"                         default="640" />
+  <arg name="color_height"                        default="480" />
+  <arg name="color_fps"                           default="15" />
+  <arg name="depth_width"                         default="640" />
+  <arg name="depth_height"                        default="480" />
+  <arg name="depth_fps"                           default="15" />
+  <arg name="align_depth"                         default="true" />
+  <arg name="enable_sync"                         default="true" />
+
+  <!-- Set camera parameter on Parameter Server -->
+  <param name="/faceDetection/camera" value="$(arg camera_type)"/>
+  <param name="/faceDetection/unit_tests" value="false"/>
+
+  <!-- ========================================== -->
+  <!-- STEP 1: Launch Intel RealSense Camera     -->
+  <!-- ========================================== -->
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+      <arg name="color_width"     value="$(arg color_width)" />
+      <arg name="color_height"    value="$(arg color_height)" />
+      <arg name="color_fps"       value="$(arg color_fps)" />
+      <arg name="depth_width"     value="$(arg depth_width)" />
+      <arg name="depth_height"    value="$(arg depth_height)" />
+      <arg name="depth_fps"       value="$(arg depth_fps)" />
+      <arg name="align_depth"     value="$(arg align_depth)" />
+      <arg name="enable_sync"     value="$(arg enable_sync)" />
+  </include>
+
+  <!-- ========================================== -->
+  <!-- STEP 2: Launch Face Detection Node        -->
+  <!-- Wait 10 seconds for camera to initialize  -->
+  <!-- ========================================== -->
+  <node name="$(arg face_detection_namespace)"
+        pkg="$(arg cssr_system_namespace)"
+        type="face_detection_application.py"
+        output="screen"
+        required="true"
+        launch-prefix="bash -c 'source $(arg face_person_detection_env_path)/bin/activate; sleep 10; $0 $@'"/>
+
+</launch>

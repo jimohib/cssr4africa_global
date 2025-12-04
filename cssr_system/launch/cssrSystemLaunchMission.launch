@@ -67,12 +67,13 @@
   <node pkg="$(arg cssr_system_namespace)" type="text_to_speech_application.py" name="$(arg text_to_speech_namespace)" output="screen" required="true"
       launch-prefix="bash -c 'source $(arg text_to_speech_env_path)/bin/activate; sleep 15; $0 $@'"/>
   
-    <!-- Launch robot_localization node // Change package name to cssr_system later -->
-  <!-- <node pkg="robot_localization" type="$(arg robot_localization_namespace)" name="$(arg robot_localization_namespace)" 
-    required="true" output="screen" launch-prefix="bash -c 'sleep 5; $0 $@'" />
+    <!-- Launch robot_localization node -->
+  <node pkg="$(arg cssr_system_namespace)" type="$(arg robot_localization_namespace)" name="$(arg robot_localization_namespace)"
+    required="true" output="screen" launch-prefix="bash -c 'sleep 5; $0 $@'">
       <param name="initial_robot_x"                   value="$(arg initial_robot_x)" />
       <param name="initial_robot_y"                   value="$(arg initial_robot_y)" />
-      <param name="initial_robot_theta"               value="$(arg initial_robot_theta)" /> -->
+      <param name="initial_robot_theta"               value="$(arg initial_robot_theta)" />
+  </node>
 
   
   <!-- Launch robot_navigation node -->
