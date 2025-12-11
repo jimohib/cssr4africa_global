@@ -33,9 +33,70 @@ set -e  # Exit on error
 # Configuration
 # ============================================================================
 
-# Default IP addresses (override with command line arguments)
-JETSON_IP="${1:-172.29.111.240}"
+# Default IP address
+DEFAULT_JETSON_IP="172.29.111.240"
+
+# Initialize with default
+JETSON_IP="$DEFAULT_JETSON_IP"
 JETSON_HOSTNAME=$(hostname)
+
+# ============================================================================
+# Help Function
+# ============================================================================
+
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Launch CSSR System nodes on Jetson (acts as ROS Master)
+
+OPTIONS:
+    --jetson-ip=IP     IP address of this Jetson (default: $DEFAULT_JETSON_IP)
+    -h, --help         Show this help message
+
+EXAMPLES:
+    # Use default IP
+    $0
+
+    # Specify Jetson IP
+    $0 --jetson-ip=192.168.1.240
+
+    # Backward compatible positional argument (deprecated)
+    $0 JETSON_IP
+
+EOF
+    exit 0
+}
+
+# ============================================================================
+# Parse Arguments
+# ============================================================================
+
+# Check for help flag
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    show_help
+fi
+
+# Check if using positional arguments (backward compatibility)
+if [[ $# -gt 0 ]] && [[ ! "$1" =~ ^-- ]]; then
+    # Positional argument mode (deprecated but supported)
+    JETSON_IP="${1:-$DEFAULT_JETSON_IP}"
+else
+    # Named arguments mode
+    for arg in "$@"; do
+        case $arg in
+            --jetson-ip=*)
+                JETSON_IP="${arg#*=}"
+                shift
+                ;;
+            *)
+                echo "Unknown option: $arg"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+fi
 
 # ROS Workspace path - ADJUST THIS TO YOUR WORKSPACE
 ROS_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace/pepper_rob_ws}"

@@ -36,13 +36,113 @@ set -e  # Exit on error
 # Configuration
 # ============================================================================
 
-# Default IP addresses (override with command line arguments)
-JETSON_IP="${1:-172.29.111.240}"
-COMPUTER_IP="${2:-172.29.111.237}"
-ROBOT_IP="${3:-172.29.111.230}"
-LAUNCH_CONTROLLER="${4:-true}"
-ROBOT_PORT="9559"
-NETWORK_INTERFACE="wlp0s20f3"
+# Default IP addresses
+DEFAULT_JETSON_IP="172.29.111.240"
+DEFAULT_COMPUTER_IP="172.29.111.237"
+DEFAULT_ROBOT_IP="172.29.111.230"
+DEFAULT_LAUNCH_CONTROLLER="true"
+DEFAULT_ROBOT_PORT="9559"
+DEFAULT_NETWORK_INTERFACE="wlp0s20f3"
+
+# Initialize with defaults
+JETSON_IP="$DEFAULT_JETSON_IP"
+COMPUTER_IP="$DEFAULT_COMPUTER_IP"
+ROBOT_IP="$DEFAULT_ROBOT_IP"
+LAUNCH_CONTROLLER="$DEFAULT_LAUNCH_CONTROLLER"
+ROBOT_PORT="$DEFAULT_ROBOT_PORT"
+NETWORK_INTERFACE="$DEFAULT_NETWORK_INTERFACE"
+
+# ============================================================================
+# Help Function
+# ============================================================================
+
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Launch CSSR System nodes on Computer (connects to Jetson's ROS Master)
+
+OPTIONS:
+    --jetson-ip=IP           IP address of Jetson running roscore (default: $DEFAULT_JETSON_IP)
+    --computer-ip=IP         IP address of this computer (default: $DEFAULT_COMPUTER_IP)
+    --robot-ip=IP            IP address of Pepper robot (default: $DEFAULT_ROBOT_IP)
+    --launch-controller=BOOL Launch behavior controller (true/false, default: $DEFAULT_LAUNCH_CONTROLLER)
+    --robot-port=PORT        Pepper robot port (default: $DEFAULT_ROBOT_PORT)
+    --network-interface=IF   Network interface name (default: $DEFAULT_NETWORK_INTERFACE)
+    -h, --help               Show this help message
+
+EXAMPLES:
+    # Use all defaults
+    $0
+
+    # Specify only Jetson IP
+    $0 --jetson-ip=192.168.1.240
+
+    # Specify multiple parameters
+    $0 --jetson-ip=192.168.1.240 --computer-ip=192.168.1.100 --robot-ip=192.168.1.200
+
+    # Launch without behavior controller
+    $0 --launch-controller=false
+
+    # Backward compatible positional arguments (deprecated)
+    $0 JETSON_IP COMPUTER_IP ROBOT_IP LAUNCH_CONTROLLER
+
+EOF
+    exit 0
+}
+
+# ============================================================================
+# Parse Arguments
+# ============================================================================
+
+# Check for help flag
+if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    show_help
+fi
+
+# Check if using positional arguments (backward compatibility)
+if [[ $# -gt 0 ]] && [[ ! "$1" =~ ^-- ]]; then
+    # Positional arguments mode (deprecated but supported)
+    JETSON_IP="${1:-$DEFAULT_JETSON_IP}"
+    COMPUTER_IP="${2:-$DEFAULT_COMPUTER_IP}"
+    ROBOT_IP="${3:-$DEFAULT_ROBOT_IP}"
+    LAUNCH_CONTROLLER="${4:-$DEFAULT_LAUNCH_CONTROLLER}"
+else
+    # Named arguments mode
+    for arg in "$@"; do
+        case $arg in
+            --jetson-ip=*)
+                JETSON_IP="${arg#*=}"
+                shift
+                ;;
+            --computer-ip=*)
+                COMPUTER_IP="${arg#*=}"
+                shift
+                ;;
+            --robot-ip=*)
+                ROBOT_IP="${arg#*=}"
+                shift
+                ;;
+            --launch-controller=*)
+                LAUNCH_CONTROLLER="${arg#*=}"
+                shift
+                ;;
+            --robot-port=*)
+                ROBOT_PORT="${arg#*=}"
+                shift
+                ;;
+            --network-interface=*)
+                NETWORK_INTERFACE="${arg#*=}"
+                shift
+                ;;
+            *)
+                echo "Unknown option: $arg"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+fi
 
 # ROS Workspace path - ADJUST THIS TO YOUR WORKSPACE
 ROS_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace/pepper_rob_ws}"
