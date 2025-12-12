@@ -38,6 +38,32 @@ CONTROL_FROM="computer"  # or "jetson"
 JETSON_USER="${JETSON_USER:-roboticslab}"
 COMPUTER_USER="${COMPUTER_USER:-cssr4africa1}"
 
+# ============================================================================
+# Workspace Paths - ADJUST THESE TO MATCH YOUR SETUP
+# ============================================================================
+#
+# IMPORTANT: If your workspace paths are different, update these variables!
+# This is the ONLY place you need to change workspace paths.
+#
+# Examples:
+#   COMPUTER_WORKSPACE="$HOME/my_custom_workspace"
+#   JETSON_WORKSPACE="/opt/ros_workspace"
+#   VENV_RELATIVE_PATH="virtual_envs/cssr4africa"
+#
+
+# Computer workspace path
+COMPUTER_WORKSPACE="${COMPUTER_WORKSPACE:-$HOME/workspace_auto_demo/pepper_rob_ws}"
+
+# Jetson workspace path
+JETSON_WORKSPACE="${JETSON_WORKSPACE:-$HOME/workspace/pepper_rob_ws}"
+
+# Virtual environment base paths (relative to workspace)
+VENV_RELATIVE_PATH="src/cssr4africa/virtual_envs"
+
+# Full virtual environment paths (automatically constructed)
+COMPUTER_VENV_BASE="$COMPUTER_WORKSPACE/$VENV_RELATIVE_PATH"
+JETSON_VENV_BASE="$JETSON_WORKSPACE/$VENV_RELATIVE_PATH"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -65,6 +91,15 @@ OPTIONS:
     --jetson-user=USER       SSH username for Jetson (default: $JETSON_USER)
     --computer-user=USER     SSH username for Computer (default: $COMPUTER_USER)
     -h, --help               Show this help message
+
+CONFIGURATION:
+    Workspace paths are configured at the top of this script:
+      Computer workspace: $COMPUTER_WORKSPACE
+      Jetson workspace:   $JETSON_WORKSPACE
+
+    To change these paths, edit the script or set environment variables:
+      export COMPUTER_WORKSPACE="/path/to/computer/workspace"
+      export JETSON_WORKSPACE="/path/to/jetson/workspace"
 
 EXAMPLES:
     # Run from Computer, launch everything
@@ -211,13 +246,19 @@ fi
 
 print_header "Checking ROS Environment"
 
-# Determine workspace paths based on which machine we're on
+# Determine which workspace is local vs remote based on control machine
 if [ "$CONTROL_FROM" = "computer" ]; then
-    LOCAL_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace_auto_demo/pepper_rob_ws}"
-    REMOTE_WORKSPACE="$HOME/workspace/pepper_rob_ws"
+    LOCAL_WORKSPACE="$COMPUTER_WORKSPACE"
+    REMOTE_WORKSPACE="$JETSON_WORKSPACE"
+    REMOTE_USER="$JETSON_USER"
+    REMOTE_IP="$JETSON_IP"
+    REMOTE_MACHINE="Jetson"
 else
-    LOCAL_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace/pepper_rob_ws}"
-    REMOTE_WORKSPACE="$HOME/workspace_auto_demo/pepper_rob_ws"
+    LOCAL_WORKSPACE="$JETSON_WORKSPACE"
+    REMOTE_WORKSPACE="$COMPUTER_WORKSPACE"
+    REMOTE_USER="$COMPUTER_USER"
+    REMOTE_IP="$COMPUTER_IP"
+    REMOTE_MACHINE="Computer"
 fi
 
 # Check local ROS Noetic installation
@@ -246,24 +287,13 @@ fi
 print_success "Local workspace is built"
 
 # Check remote workspace via SSH
-if [ "$CONTROL_FROM" = "computer" ]; then
-    print_info "Checking Jetson workspace..."
-    if ssh "$JETSON_USER@$JETSON_IP" "[ -d $REMOTE_WORKSPACE ] && [ -f $REMOTE_WORKSPACE/devel/setup.bash ]"; then
-        print_success "Jetson workspace is ready"
-    else
-        print_error "Jetson workspace not found or not built at: $REMOTE_WORKSPACE"
-        print_info "On Jetson, run: cd $REMOTE_WORKSPACE && catkin_make"
-        exit 1
-    fi
+print_info "Checking $REMOTE_MACHINE workspace..."
+if ssh "$REMOTE_USER@$REMOTE_IP" "[ -d $REMOTE_WORKSPACE ] && [ -f $REMOTE_WORKSPACE/devel/setup.bash ]"; then
+    print_success "$REMOTE_MACHINE workspace is ready"
 else
-    print_info "Checking Computer workspace..."
-    if ssh "$COMPUTER_USER@$COMPUTER_IP" "[ -d $REMOTE_WORKSPACE ] && [ -f $REMOTE_WORKSPACE/devel/setup.bash ]"; then
-        print_success "Computer workspace is ready"
-    else
-        print_error "Computer workspace not found or not built at: $REMOTE_WORKSPACE"
-        print_info "On Computer, run: cd $REMOTE_WORKSPACE && catkin_make"
-        exit 1
-    fi
+    print_error "$REMOTE_MACHINE workspace not found or not built at: $REMOTE_WORKSPACE"
+    print_info "On $REMOTE_MACHINE, run: cd $REMOTE_WORKSPACE && catkin_make"
+    exit 1
 fi
 
 # ============================================================================
@@ -324,27 +354,21 @@ check_venv_local() {
 # Check virtual environments based on where we're running from
 if [ "$CONTROL_FROM" = "computer" ]; then
     # Running from Computer - check Computer's virtual envs locally
-    VENV_BASE="$LOCAL_WORKSPACE/src/cssr4africa/virtual_envs"
-
     print_info "Checking Computer virtual environments (local)..."
-    check_venv_local "$VENV_BASE" "sound_detection_env"
-    check_venv_local "$VENV_BASE" "speech_event_env"
-    check_venv_local "$VENV_BASE" "text_to_speech_env"
+    check_venv_local "$COMPUTER_VENV_BASE" "sound_detection_env"
+    check_venv_local "$COMPUTER_VENV_BASE" "speech_event_env"
+    check_venv_local "$COMPUTER_VENV_BASE" "text_to_speech_env"
 
     # Check Jetson's face detection venv via SSH
     print_info "Checking Jetson virtual environments (remote)..."
-    JETSON_VENV_BASE="$REMOTE_WORKSPACE/src/cssr4africa/virtual_envs"
     check_venv_remote "Jetson" "$JETSON_USER" "$JETSON_IP" "$JETSON_VENV_BASE" "face_detection_env"
 else
     # Running from Jetson - check Jetson's venv locally, Computer's via SSH
-    VENV_BASE="$LOCAL_WORKSPACE/src/cssr4africa/virtual_envs"
-
     print_info "Checking Jetson virtual environments (local)..."
-    check_venv_local "$VENV_BASE" "face_detection_env"
+    check_venv_local "$JETSON_VENV_BASE" "face_detection_env"
 
     # Check Computer's venvs via SSH
     print_info "Checking Computer virtual environments (remote)..."
-    COMPUTER_VENV_BASE="$REMOTE_WORKSPACE/src/cssr4africa/virtual_envs"
     check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "sound_detection_env"
     check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "speech_event_env"
     check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "text_to_speech_env"
@@ -369,7 +393,7 @@ if [ "$CONTROL_FROM" = "computer" ]; then
 
     print_info "Step 1/2: Starting Jetson nodes (roscore + camera + face detection)..."
     ssh "$JETSON_USER@$JETSON_IP" "bash -s" << EOF &
-        cd ~/workspace/pepper_rob_ws
+        cd $JETSON_WORKSPACE
         source /opt/ros/noetic/setup.bash
         source devel/setup.bash
         export ROS_MASTER_URI="http://$JETSON_IP:11311"
@@ -425,7 +449,7 @@ EOF
     fi
 
     print_info "Step 2/2: Starting Computer nodes..."
-    cd ~/workspace_auto_demo/pepper_rob_ws
+    cd $COMPUTER_WORKSPACE
     source /opt/ros/noetic/setup.bash
     source devel/setup.bash
     export ROS_MASTER_URI="http://$JETSON_IP:11311"
@@ -441,7 +465,7 @@ else
     # Jetson controls, Computer is remote
 
     print_info "Step 1/2: Starting Jetson nodes (roscore + camera + face detection)..."
-    cd ~/workspace/pepper_rob_ws
+    cd $JETSON_WORKSPACE
     source /opt/ros/noetic/setup.bash
     source devel/setup.bash
     export ROS_MASTER_URI="http://$JETSON_IP:11311"
@@ -489,7 +513,7 @@ else
 
     print_info "Step 2/2: Starting Computer nodes via SSH..."
     ssh "$COMPUTER_USER@$COMPUTER_IP" "bash -s" << EOF
-        cd ~/workspace_auto_demo/pepper_rob_ws
+        cd $COMPUTER_WORKSPACE
         source /opt/ros/noetic/setup.bash
         source devel/setup.bash
         export ROS_MASTER_URI="http://$JETSON_IP:11311"
