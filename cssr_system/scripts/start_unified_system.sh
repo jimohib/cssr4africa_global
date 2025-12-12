@@ -35,7 +35,7 @@ LAUNCH_CONTROLLER="$DEFAULT_LAUNCH_CONTROLLER"
 CONTROL_FROM="computer"  # or "jetson"
 
 # SSH usernames
-JETSON_USER="${JETSON_USER:-cssr4africa}"
+JETSON_USER="${JETSON_USER:-roboticslab}"
 COMPUTER_USER="${COMPUTER_USER:-cssr4africa1}"
 
 # Colors
@@ -81,10 +81,11 @@ PREREQUISITES:
        Run this on the controlling machine:
 
        ssh-keygen -t rsa -b 4096
-       ssh-copy-id user@remote-machine-ip
+       ssh-copy-id roboticslab@JETSON_IP    (if controlling from Computer)
+       ssh-copy-id cssr4africa1@COMPUTER_IP (if controlling from Jetson)
 
     2. Test SSH access:
-       ssh user@remote-machine-ip "echo 'SSH works!'"
+       ssh roboticslab@172.29.111.240 "echo 'SSH works!'"
 
 EOF
     exit 0
@@ -185,6 +186,7 @@ if [ "$CONTROL_FROM" = "computer" ]; then
         print_success "SSH to Jetson working"
     else
         print_error "Cannot SSH to Jetson. Please set up SSH keys:"
+        echo "  On Computer, run:"
         echo "  ssh-keygen -t rsa -b 4096"
         echo "  ssh-copy-id $JETSON_USER@$JETSON_IP"
         exit 1
@@ -196,6 +198,7 @@ else
         print_success "SSH to Computer working"
     else
         print_error "Cannot SSH to Computer. Please set up SSH keys:"
+        echo "  On Jetson, run:"
         echo "  ssh-keygen -t rsa -b 4096"
         echo "  ssh-copy-id $COMPUTER_USER@$COMPUTER_IP"
         exit 1

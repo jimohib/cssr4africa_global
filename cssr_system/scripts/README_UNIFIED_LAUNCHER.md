@@ -35,13 +35,16 @@ ssh-keygen -t rsa -b 4096
 
 # Copy key to remote machine
 # If running from Computer:
-ssh-copy-id cssr4africa@172.29.111.240  # Jetson
+ssh-copy-id roboticslab@172.29.111.240  # Jetson
 
 # If running from Jetson:
 ssh-copy-id cssr4africa1@172.29.111.237  # Computer
 
 # Test SSH (should NOT ask for password)
-ssh user@remote-ip "echo 'SSH works!'"
+# From Computer:
+ssh roboticslab@172.29.111.240 "echo 'SSH works!'"
+# From Jetson:
+ssh cssr4africa1@172.29.111.237 "echo 'SSH works!'"
 ```
 
 ### Usage
@@ -215,10 +218,10 @@ Click the red **"STOP SYSTEM"** button to cleanly shutdown all nodes.
    ```bash
    # On Computer
    ssh-keygen -t rsa -b 4096
-   ssh-copy-id cssr4africa@172.29.111.240
+   ssh-copy-id roboticslab@172.29.111.240
 
    # Test
-   ssh cssr4africa@172.29.111.240 "echo 'Success!'"
+   ssh roboticslab@172.29.111.240 "echo 'Success!'"
    ```
 
 2. **Make script executable**:
