@@ -198,6 +198,52 @@ print_warning() {
 }
 
 # ============================================================================
+# Cleanup Function
+# ============================================================================
+
+cleanup() {
+    print_header "System Shutdown - Cleaning Up"
+
+    if [ "$CONTROL_FROM" = "computer" ]; then
+        # Cleanup on Jetson via SSH
+        print_info "Stopping Jetson nodes..."
+        ssh "$JETSON_USER@$JETSON_IP" "bash -s" << 'EOF' &>/dev/null || true
+            killall roslaunch 2>/dev/null || true
+            killall roscore 2>/dev/null || true
+            killall rosmaster 2>/dev/null || true
+            sleep 2
+EOF
+        print_success "Jetson nodes stopped"
+
+        # Cleanup on local Computer
+        print_info "Stopping Computer nodes..."
+        killall roslaunch 2>/dev/null || true
+        print_success "Computer nodes stopped"
+    else
+        # Cleanup on local Jetson
+        print_info "Stopping Jetson nodes..."
+        killall roslaunch 2>/dev/null || true
+        killall roscore 2>/dev/null || true
+        killall rosmaster 2>/dev/null || true
+        print_success "Jetson nodes stopped"
+
+        # Cleanup on Computer via SSH
+        print_info "Stopping Computer nodes..."
+        ssh "$COMPUTER_USER@$COMPUTER_IP" "bash -s" << 'EOF' &>/dev/null || true
+            killall roslaunch 2>/dev/null || true
+            sleep 2
+EOF
+        print_success "Computer nodes stopped"
+    fi
+
+    print_info "Cleanup complete"
+    echo
+}
+
+# Trap Ctrl+C and script exit to run cleanup
+trap cleanup EXIT INT TERM
+
+# ============================================================================
 # Pre-flight Checks
 # ============================================================================
 
@@ -399,9 +445,14 @@ if [ "$CONTROL_FROM" = "computer" ]; then
         export ROS_MASTER_URI="http://$JETSON_IP:11311"
         export ROS_IP="$JETSON_IP"
 
-        echo "Starting roscore on Jetson..."
-        roscore &
-        sleep 5
+        echo "Checking if roscore is already running..."
+        if timeout 2 rostopic list &> /dev/null; then
+            echo "roscore already running, reusing existing instance"
+        else
+            echo "Starting roscore on Jetson..."
+            roscore &
+            sleep 5
+        fi
 
         echo "Launching Jetson nodes..."
         roslaunch cssr_system cssrSystemLaunchJetson_v2_master.launch \
@@ -471,8 +522,14 @@ else
     export ROS_MASTER_URI="http://$JETSON_IP:11311"
     export ROS_IP="$JETSON_IP"
 
-    roscore &
-    sleep 5
+    print_info "Checking if roscore is already running..."
+    if timeout 2 rostopic list &> /dev/null; then
+        print_success "roscore already running, reusing existing instance"
+    else
+        print_info "Starting roscore..."
+        roscore &
+        sleep 5
+    fi
 
     roslaunch cssr_system cssrSystemLaunchJetson_v2_master.launch \
         jetson_ip:="$JETSON_IP" \
@@ -527,5 +584,4 @@ else
 EOF
 fi
 
-print_header "System Shutdown"
-print_info "All nodes stopped"
+# Script will automatically run cleanup() on exit via trap
