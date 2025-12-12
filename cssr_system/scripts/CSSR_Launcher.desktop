@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=CSSR System Launcher
+Comment=Launch CSSR Robot System with GUI
+Exec=python3 /home/user/workspace_auto_demo/pepper_rob_ws/src/cssr4africa/cssr_system/scripts/cssr_launcher_gui.py
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;ROS;Robotics;
+StartupNotify=true
