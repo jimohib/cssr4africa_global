@@ -206,6 +206,159 @@ else
 fi
 
 # ============================================================================
+# Check ROS Installation and Workspace
+# ============================================================================
+
+print_header "Checking ROS Environment"
+
+# Determine workspace paths based on which machine we're on
+if [ "$CONTROL_FROM" = "computer" ]; then
+    LOCAL_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace_auto_demo/pepper_rob_ws}"
+    REMOTE_WORKSPACE="$HOME/workspace/pepper_rob_ws"
+else
+    LOCAL_WORKSPACE="${ROS_WORKSPACE:-$HOME/workspace/pepper_rob_ws}"
+    REMOTE_WORKSPACE="$HOME/workspace_auto_demo/pepper_rob_ws"
+fi
+
+# Check local ROS Noetic installation
+if [ -f "/opt/ros/noetic/setup.bash" ]; then
+    print_success "ROS Noetic found on local machine"
+else
+    print_error "ROS Noetic not found on local machine"
+    print_info "Please install ROS Noetic: http://wiki.ros.org/noetic/Installation"
+    exit 1
+fi
+
+# Check local workspace exists
+if [ ! -d "$LOCAL_WORKSPACE" ]; then
+    print_error "ROS workspace not found at: $LOCAL_WORKSPACE"
+    print_info "Please set ROS_WORKSPACE environment variable or adjust the script"
+    exit 1
+fi
+print_success "Local workspace found: $LOCAL_WORKSPACE"
+
+# Check local workspace is built
+if [ ! -f "$LOCAL_WORKSPACE/devel/setup.bash" ]; then
+    print_error "Workspace not built at: $LOCAL_WORKSPACE"
+    print_info "Please run: cd $LOCAL_WORKSPACE && catkin_make"
+    exit 1
+fi
+print_success "Local workspace is built"
+
+# Check remote workspace via SSH
+if [ "$CONTROL_FROM" = "computer" ]; then
+    print_info "Checking Jetson workspace..."
+    if ssh "$JETSON_USER@$JETSON_IP" "[ -d $REMOTE_WORKSPACE ] && [ -f $REMOTE_WORKSPACE/devel/setup.bash ]"; then
+        print_success "Jetson workspace is ready"
+    else
+        print_error "Jetson workspace not found or not built at: $REMOTE_WORKSPACE"
+        print_info "On Jetson, run: cd $REMOTE_WORKSPACE && catkin_make"
+        exit 1
+    fi
+else
+    print_info "Checking Computer workspace..."
+    if ssh "$COMPUTER_USER@$COMPUTER_IP" "[ -d $REMOTE_WORKSPACE ] && [ -f $REMOTE_WORKSPACE/devel/setup.bash ]"; then
+        print_success "Computer workspace is ready"
+    else
+        print_error "Computer workspace not found or not built at: $REMOTE_WORKSPACE"
+        print_info "On Computer, run: cd $REMOTE_WORKSPACE && catkin_make"
+        exit 1
+    fi
+fi
+
+# ============================================================================
+# Check Robot Connection
+# ============================================================================
+
+print_header "Checking Pepper Robot Connection"
+
+print_info "Attempting to ping robot at $ROBOT_IP..."
+if ping -c 2 -W 2 "$ROBOT_IP" &> /dev/null; then
+    print_success "Robot is reachable at $ROBOT_IP"
+else
+    print_warning "Cannot ping robot at $ROBOT_IP"
+    print_info "Robot may be offline or on a different network"
+    read -p "Continue anyway? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+# ============================================================================
+# Check Virtual Environments (Computer only)
+# ============================================================================
+
+print_header "Checking Virtual Environments"
+
+# Function to check virtual environments
+check_venv_remote() {
+    local machine=$1
+    local user=$2
+    local ip=$3
+    local venv_base=$4
+    local venv_name=$5
+
+    if ssh "$user@$ip" "[ -d $venv_base/$venv_name ] && [ -f $venv_base/$venv_name/bin/activate ]"; then
+        print_success "[$machine] Found: $venv_name"
+        return 0
+    else
+        print_warning "[$machine] Missing: $venv_name"
+        return 1
+    fi
+}
+
+check_venv_local() {
+    local venv_base=$1
+    local venv_name=$2
+
+    if [ -d "$venv_base/$venv_name" ] && [ -f "$venv_base/$venv_name/bin/activate" ]; then
+        print_success "Found: $venv_name"
+        return 0
+    else
+        print_warning "Missing: $venv_name at $venv_base/$venv_name"
+        return 1
+    fi
+}
+
+# Check virtual environments based on where we're running from
+if [ "$CONTROL_FROM" = "computer" ]; then
+    # Running from Computer - check Computer's virtual envs locally
+    VENV_BASE="$LOCAL_WORKSPACE/src/cssr4africa/virtual_envs"
+
+    print_info "Checking Computer virtual environments (local)..."
+    check_venv_local "$VENV_BASE" "sound_detection_env"
+    check_venv_local "$VENV_BASE" "speech_event_env"
+    check_venv_local "$VENV_BASE" "text_to_speech_env"
+
+    # Check Jetson's face detection venv via SSH
+    print_info "Checking Jetson virtual environments (remote)..."
+    JETSON_VENV_BASE="$REMOTE_WORKSPACE/src/cssr4africa/virtual_envs"
+    check_venv_remote "Jetson" "$JETSON_USER" "$JETSON_IP" "$JETSON_VENV_BASE" "face_detection_env"
+else
+    # Running from Jetson - check Jetson's venv locally, Computer's via SSH
+    VENV_BASE="$LOCAL_WORKSPACE/src/cssr4africa/virtual_envs"
+
+    print_info "Checking Jetson virtual environments (local)..."
+    check_venv_local "$VENV_BASE" "face_detection_env"
+
+    # Check Computer's venvs via SSH
+    print_info "Checking Computer virtual environments (remote)..."
+    COMPUTER_VENV_BASE="$REMOTE_WORKSPACE/src/cssr4africa/virtual_envs"
+    check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "sound_detection_env"
+    check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "speech_event_env"
+    check_venv_remote "Computer" "$COMPUTER_USER" "$COMPUTER_IP" "$COMPUTER_VENV_BASE" "text_to_speech_env"
+fi
+
+echo
+print_info "If any virtual environments are missing, Python nodes may fail to start"
+read -p "Continue? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+fi
+
+# ============================================================================
 # Launch Nodes
 # ============================================================================
 
@@ -236,6 +389,40 @@ EOF
 
     print_info "Waiting 15 seconds for Jetson nodes to initialize..."
     sleep 15
+
+    # Verify Jetson nodes are running
+    print_header "Verifying Jetson Nodes"
+
+    # Set ROS environment for checking
+    export ROS_MASTER_URI="http://$JETSON_IP:11311"
+    export ROS_IP="$COMPUTER_IP"
+
+    # Check roscore is accessible
+    print_info "Checking connection to Jetson's roscore..."
+    if timeout 5 rostopic list &> /dev/null; then
+        print_success "Connected to roscore on Jetson"
+    else
+        print_error "Cannot connect to roscore on Jetson ($JETSON_IP)"
+        print_info "Make sure:"
+        print_info "  1. Jetson nodes started successfully"
+        print_info "  2. Jetson IP ($JETSON_IP) is correct"
+        print_info "  3. Firewall allows ROS communication (port 11311)"
+        exit 1
+    fi
+
+    # Check face detection is available
+    print_info "Checking if face detection is available..."
+    if timeout 5 rostopic list 2>/dev/null | grep -q "/faceDetection"; then
+        print_success "Face detection node is running on Jetson"
+    else
+        print_warning "Face detection topics not detected"
+        print_info "This may be normal if the nodes are still starting up"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 
     print_info "Step 2/2: Starting Computer nodes..."
     cd ~/workspace_auto_demo/pepper_rob_ws
@@ -272,6 +459,33 @@ else
 
     print_info "Waiting 15 seconds for Jetson nodes to initialize..."
     sleep 15
+
+    # Verify Jetson nodes are running
+    print_header "Verifying Jetson Nodes"
+
+    # Check roscore is accessible (local)
+    print_info "Checking roscore..."
+    if timeout 5 rostopic list &> /dev/null; then
+        print_success "roscore is running"
+    else
+        print_error "Cannot connect to roscore"
+        print_info "roscore may have failed to start"
+        exit 1
+    fi
+
+    # Check face detection is available
+    print_info "Checking if face detection is available..."
+    if timeout 5 rostopic list 2>/dev/null | grep -q "/faceDetection"; then
+        print_success "Face detection node is running"
+    else
+        print_warning "Face detection topics not detected"
+        print_info "This may be normal if the nodes are still starting up"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 
     print_info "Step 2/2: Starting Computer nodes via SSH..."
     ssh "$COMPUTER_USER@$COMPUTER_IP" "bash -s" << EOF
