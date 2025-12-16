@@ -103,10 +103,13 @@ Press `Ctrl+C` to stop all nodes. The script will clean up processes on both mac
 ### Features
 
 ✅ **Big START button** - One click to launch everything
-✅ **Real-time status indicators** - See which nodes are running
+✅ **Real-time status indicators** - See which nodes are running (turns green when confirmed active)
 ✅ **Live log window** - Monitor system output
 ✅ **IP configuration fields** - Easy to change settings
 ✅ **Pre-flight checks** - Automatic network testing
+✅ **Auto-start mission** - Automatically sends Enter when behaviorController prompts
+✅ **Mission restart handling** - Dialog prompt to restart mission when complete
+✅ **Auto-fix executable** - Automatically makes launch script executable if needed
 ✅ **Stop button** - Cleanly shutdown system
 
 ### Installation
@@ -190,6 +193,34 @@ Colors:
 #### Stopping the System
 
 Click the red **"STOP SYSTEM"** button to cleanly shutdown all nodes.
+
+#### Automation Features
+
+The GUI includes several intelligent automation features:
+
+**1. Auto-Start Mission**
+- When behaviorController prompts "Press 'Enter' to start the mission", the GUI automatically sends Enter
+- Mission starts immediately without manual intervention
+- Logged in the window as "✓ Mission started automatically"
+
+**2. Mission Restart Handling**
+- After a mission completes, behaviorController prompts: "Do you want to run the mission again (y/n)"
+- GUI shows a dialog asking if you want to restart
+- Click **Yes** to restart the mission (sends 'y')
+- Click **No** to end the mission (sends 'n')
+
+**3. Smart Status Indicators**
+- Status indicators wait for **confirmation messages** before turning green
+- They look for specific success patterns like:
+  - "Face detection node is running"
+  - "Connected to roscore"
+  - "robotLocalization started"
+- This ensures indicators only turn green when nodes are actually working, not just starting
+
+**4. Auto-Fix Executable**
+- If the launch script isn't executable, the GUI automatically runs `chmod +x`
+- Saves you from having to manually fix permissions
+- Shows debug info if the script can't be found
 
 ---
 

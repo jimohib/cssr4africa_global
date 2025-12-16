@@ -405,18 +405,65 @@ class CSSRLauncherGUI:
                         self.log(f"Failed to auto-start mission: {e}", "ERROR")
                     self.log("=" * 60, "INFO")
 
-                # Update status based on log output
-                if "roscore" in line.lower():
+                # Handle mission restart prompt - ask user if they want to continue
+                if ("run" in line_lower and "mission" in line_lower and "again" in line_lower) or \
+                   ("continue" in line_lower and "y/n" in line_lower):
+                    self.log("=" * 60, "INFO")
+                    self.log("Mission completed - Restart prompt detected", "INFO")
+
+                    # Ask user if they want to restart
+                    restart = messagebox.askyesno(
+                        "Mission Complete",
+                        "The mission has completed.\n\nDo you want to run the mission again?",
+                        parent=self.root
+                    )
+
+                    try:
+                        if restart:
+                            process.stdin.write("y\n")
+                            process.stdin.flush()
+                            self.log("✓ Mission restarting...", "SUCCESS")
+                        else:
+                            process.stdin.write("n\n")
+                            process.stdin.flush()
+                            self.log("Mission ended by user", "INFO")
+                    except Exception as e:
+                        self.log(f"Failed to send restart response: {e}", "ERROR")
+                    self.log("=" * 60, "INFO")
+
+                # Update status indicators - look for specific SUCCESS messages
+                # These indicate nodes are actually running, not just starting
+
+                # roscore - look for connection confirmation
+                if ("connected to roscore" in line_lower or
+                    "roscore already running" in line_lower or
+                    "roscore is running" in line_lower):
                     self.update_status('roscore', 'running')
-                if "camera" in line.lower() or "realsense" in line.lower():
+
+                # Camera - look for successful initialization
+                if ("realsense" in line_lower and ("started" in line_lower or "running" in line_lower)) or \
+                   ("camera node" in line_lower and "started" in line_lower):
                     self.update_status('camera', 'running')
-                if "facedetection" in line.lower():
+
+                # Face detection - look for confirmation it's actually publishing
+                if ("face detection node is running" in line_lower or
+                    ("facedetection" in line_lower and "started" in line_lower) or
+                    "/facedetection" in line_lower):
                     self.update_status('face_detection', 'running')
-                if "robot" in line.lower() and "interface" in line.lower():
+
+                # Robot interface - look for naoqi driver confirmation
+                if (("naoqi_driver" in line_lower or "naoqi_dcm_driver" in line_lower) and "started" in line_lower) or \
+                   ("robot driver" in line_lower and "running" in line_lower) or \
+                   "naoqi" in line_lower and "successfully" in line_lower:
                     self.update_status('robot_interface', 'running')
-                if "navigation" in line.lower():
+
+                # Navigation - look for robotLocalization or robotNavigation
+                if ("robotlocalization" in line_lower or "robotnavigation" in line_lower) and \
+                   ("started" in line_lower or "running" in line_lower):
                     self.update_status('navigation', 'running')
-                if "behaviorcontroller" in line.lower():
+
+                # Behavior controller - look for actual start confirmation
+                if "behaviorcontroller" in line_lower and ("started" in line_lower or "running" in line_lower):
                     self.update_status('behavior_controller', 'running')
 
             process.wait()
