@@ -106,14 +106,20 @@ class CSSRLauncherGUI:
             ("ROS Master", "roscore"),
             ("Camera", "camera"),
             ("Face Detection", "face_detection"),
+            ("Sound Detection", "sound_detection"),
+            ("Person Detection", "person_detection"),
+            ("Speech Event", "speech_event"),
+            ("Text to Speech", "text_to_speech"),
             ("Robot Interface", "robot_interface"),
-            ("Navigation", "navigation"),
-            ("Behavior Controller", "behavior_controller")
+            ("Robot Localization", "robot_localization"),
+            ("Robot Navigation", "robot_navigation"),
+            ("Behavior Controller", "behavior_controller"),
+            ("Gesture Execution", "gesture_execution")
         ]
 
         for idx, (label, key) in enumerate(status_items):
-            row_idx = idx // 3
-            col_idx = (idx % 3) * 2
+            row_idx = idx // 4
+            col_idx = (idx % 4) * 2
 
             ttk.Label(status_frame, text=f"{label}:").grid(
                 row=row_idx, column=col_idx, sticky=tk.W, padx=5, pady=3
@@ -398,11 +404,30 @@ class CSSRLauncherGUI:
 
             # Stream output to log
             for line in process.stdout:
-                self.log(line.strip())
+                # Auto-detect log level from ROS messages
+                line_stripped = line.strip()
+                if not line_stripped:
+                    continue
+
+                # Detect log level from message content
+                line_lower = line_stripped.lower()
+                if "[error]" in line_lower or "error:" in line_lower:
+                    level = "ERROR"
+                elif "[warn]" in line_lower or "warning:" in line_lower or "[warning]" in line_lower:
+                    level = "WARN"
+                elif "[info]" in line_lower or "info:" in line_lower:
+                    level = "INFO"
+                elif "success" in line_lower or "✓" in line_stripped:
+                    level = "SUCCESS"
+                elif "[debug]" in line_lower:
+                    level = "DEBUG"
+                else:
+                    level = "INFO"  # Default to INFO
+
+                self.log(line_stripped, level)
 
                 # Auto-send Enter when behaviorController prompts for mission start
                 # Detects patterns like: "Press Enter to start", "Press 'Enter' to start", etc.
-                line_lower = line.lower()
                 if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
                     self.log("=" * 60, "INFO")
                     self.log("Detected mission start prompt", "INFO")
@@ -441,8 +466,8 @@ class CSSRLauncherGUI:
                         self.log(f"Failed to send restart response: {e}", "ERROR")
                     self.log("=" * 60, "INFO")
 
-                # Update status indicators - look for specific SUCCESS messages
-                # These indicate nodes are actually running, not just starting
+                # Update status indicators based on actual heartbeat messages
+                # Heartbeat format: "<nodeName>: running" or "<nodeName>: running."
 
                 # roscore - look for connection confirmation
                 if ("connected to roscore" in line_lower or
@@ -455,28 +480,47 @@ class CSSRLauncherGUI:
                    ("camera node" in line_lower and "started" in line_lower):
                     self.update_status('camera', 'running')
 
-                # Face detection - look for confirmation it's actually running
-                if ("face detection" in line_lower and any(kw in line_lower for kw in ["running", "started", "initialized", "ready"])) or \
-                   ("facedetection" in line_lower and any(kw in line_lower for kw in ["started", "running", "initialized", "ready", "successfully"])) or \
-                   ("/facedetection" in line_lower and "started" in line_lower) or \
-                   ("face_detection_node" in line_lower):
+                # Face Detection - actual heartbeat: "faceDetection: running."
+                if "facedetection: running" in line_lower:
                     self.update_status('face_detection', 'running')
 
-                # Robot interface - look for naoqi driver confirmation
+                # Sound Detection - actual heartbeat: "soundDetection: running."
+                if "sounddetection: running" in line_lower:
+                    self.update_status('sound_detection', 'running')
+
+                # Person Detection - actual heartbeat: "personDetection: running."
+                if "persondetection: running" in line_lower:
+                    self.update_status('person_detection', 'running')
+
+                # Speech Event - actual heartbeat: "speechEvent: running"
+                if "speechevent: running" in line_lower:
+                    self.update_status('speech_event', 'running')
+
+                # Text to Speech - actual heartbeat: "textToSpeech: running"
+                if "texttospeech: running" in line_lower:
+                    self.update_status('text_to_speech', 'running')
+
+                # Robot Interface - look for naoqi driver confirmation
                 if (("naoqi_driver" in line_lower or "naoqi_dcm_driver" in line_lower) and "started" in line_lower) or \
                    ("robot driver" in line_lower and "running" in line_lower) or \
-                   "naoqi" in line_lower and "successfully" in line_lower:
+                   ("naoqi" in line_lower and "successfully" in line_lower):
                     self.update_status('robot_interface', 'running')
 
-                # Navigation - look for robotLocalization or robotNavigation
-                if ("robotlocalization" in line_lower or "robotnavigation" in line_lower) and \
-                   ("started" in line_lower or "running" in line_lower):
-                    self.update_status('navigation', 'running')
+                # Robot Localization - actual heartbeat: "robotLocalization: running."
+                if "robotlocalization: running" in line_lower:
+                    self.update_status('robot_localization', 'running')
 
-                # Behavior controller - look for actual start confirmation or mission prompt
-                if ("behaviorcontroller" in line_lower or "behavior_controller" in line_lower or "behaviorcontrol" in line_lower) and \
-                   any(kw in line_lower for kw in ["started", "running", "initialized", "ready", "successfully"]):
+                # Robot Navigation - actual heartbeat: "robotNavigation: running."
+                if "robotnavigation: running" in line_lower:
+                    self.update_status('robot_navigation', 'running')
+
+                # Behavior Controller - actual heartbeat: "behaviorController: running"
+                if "behaviorcontroller: running" in line_lower:
                     self.update_status('behavior_controller', 'running')
+
+                # Gesture Execution - actual heartbeat: "gestureExecution: running..."
+                if "gestureexecution: running" in line_lower:
+                    self.update_status('gesture_execution', 'running')
 
                 # Also detect behavior controller when mission start prompt appears
                 if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
