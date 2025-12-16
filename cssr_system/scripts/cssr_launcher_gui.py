@@ -350,11 +350,12 @@ class CSSRLauncherGUI:
             self.update_status('roscore', 'starting')
             self.update_status('camera', 'starting')
 
-            # Launch process
+            # Launch process with stdin enabled for auto-starting mission
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,  # Enable stdin to send Enter key
                 text=True,
                 bufsize=1
             )
@@ -364,6 +365,19 @@ class CSSRLauncherGUI:
             # Stream output to log
             for line in process.stdout:
                 self.log(line.strip())
+
+                # Auto-send Enter when behaviorController prompts for mission start
+                if "press enter" in line.lower() and "start" in line.lower():
+                    self.log("=" * 60, "INFO")
+                    self.log("Detected mission start prompt", "INFO")
+                    self.log("Auto-starting mission...", "INFO")
+                    try:
+                        process.stdin.write("\n")
+                        process.stdin.flush()
+                        self.log("✓ Mission started automatically", "SUCCESS")
+                    except Exception as e:
+                        self.log(f"Failed to auto-start mission: {e}", "ERROR")
+                    self.log("=" * 60, "INFO")
 
                 # Update status based on log output
                 if "roscore" in line.lower():
