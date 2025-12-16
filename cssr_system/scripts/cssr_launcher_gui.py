@@ -53,8 +53,8 @@ class CSSRLauncherGUI:
 
         title_label = tk.Label(
             header_frame,
-            text="🤖 CSSR System Launcher",
-            font=("Arial", 24, "bold"),
+            text="CSSR System Launcher",
+            font=("TkDefaultFont", 18, "bold"),
             bg="#2c3e50",
             fg="white"
         )
@@ -66,14 +66,14 @@ class CSSRLauncherGUI:
 
         # IP Configuration
         row = 0
-        ttk.Label(config_frame, text="Jetson IP:", font=("Arial", 10)).grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(config_frame, text="Jetson IP:").grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Entry(config_frame, textvariable=self.config['jetson_ip'], width=20).grid(row=row, column=1, padx=5, pady=5)
 
-        ttk.Label(config_frame, text="Computer IP:", font=("Arial", 10)).grid(row=row, column=2, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(config_frame, text="Computer IP:").grid(row=row, column=2, sticky=tk.W, padx=5, pady=5)
         ttk.Entry(config_frame, textvariable=self.config['computer_ip'], width=20).grid(row=row, column=3, padx=5, pady=5)
 
         row += 1
-        ttk.Label(config_frame, text="Robot IP:", font=("Arial", 10)).grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(config_frame, text="Robot IP:").grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Entry(config_frame, textvariable=self.config['robot_ip'], width=20).grid(row=row, column=1, padx=5, pady=5)
 
         ttk.Checkbutton(
@@ -83,7 +83,7 @@ class CSSRLauncherGUI:
         ).grid(row=row, column=2, columnspan=2, sticky=tk.W, padx=5, pady=5)
 
         row += 1
-        ttk.Label(config_frame, text="Control from:", font=("Arial", 10)).grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Label(config_frame, text="Control from:").grid(row=row, column=0, sticky=tk.W, padx=5, pady=5)
         control_combo = ttk.Combobox(
             config_frame,
             textvariable=self.config['control_from'],
@@ -112,14 +112,14 @@ class CSSRLauncherGUI:
             row_idx = idx // 3
             col_idx = (idx % 3) * 2
 
-            ttk.Label(status_frame, text=f"{label}:", font=("Arial", 9)).grid(
+            ttk.Label(status_frame, text=f"{label}:").grid(
                 row=row_idx, column=col_idx, sticky=tk.W, padx=5, pady=3
             )
 
             status_label = tk.Label(
                 status_frame,
                 text="●",
-                font=("Arial", 14),
+                font=("TkDefaultFont", 12),
                 fg="gray"
             )
             status_label.grid(row=row_idx, column=col_idx+1, padx=5, pady=3)
@@ -135,12 +135,12 @@ class CSSRLauncherGUI:
 
         self.start_button = tk.Button(
             button_container,
-            text="▶  START SYSTEM",
+            text="START SYSTEM",
             command=self.start_system,
             bg="#27ae60",
             fg="white",
-            font=("Arial", 16, "bold"),
-            width=18,
+            font=("TkDefaultFont", 14, "bold"),
+            width=20,
             height=2,
             relief=tk.RAISED,
             bd=3,
@@ -150,12 +150,12 @@ class CSSRLauncherGUI:
 
         self.stop_button = tk.Button(
             button_container,
-            text="■  STOP SYSTEM",
+            text="STOP SYSTEM",
             command=self.stop_system,
             bg="#e74c3c",
             fg="white",
-            font=("Arial", 16, "bold"),
-            width=18,
+            font=("TkDefaultFont", 14, "bold"),
+            width=20,
             height=2,
             relief=tk.RAISED,
             bd=3,
@@ -171,7 +171,7 @@ class CSSRLauncherGUI:
         self.log_text = scrolledtext.ScrolledText(
             log_frame,
             height=15,
-            font=("Courier", 9),
+            font=("TkFixedFont", 9),
             bg="#1e1e1e",
             fg="#00ff00",
             insertbackground="white"
@@ -191,8 +191,7 @@ class CSSRLauncherGUI:
             footer_frame,
             text="CSSR4Africa Robot System | Ready",
             bg="#34495e",
-            fg="white",
-            font=("Arial", 9)
+            fg="white"
         )
         footer_label.pack(side=tk.LEFT, padx=10)
 
@@ -201,7 +200,7 @@ class CSSRLauncherGUI:
             text="●",
             bg="#34495e",
             fg="gray",
-            font=("Arial", 12)
+            font=("TkDefaultFont", 10)
         )
         self.footer_status.pack(side=tk.RIGHT, padx=10)
 
