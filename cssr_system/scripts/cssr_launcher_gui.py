@@ -325,7 +325,7 @@ class CSSRLauncherGUI:
             # Build launch command
             script_path = os.path.join(
                 os.path.dirname(__file__),
-                "start_unified_system.sh"
+                "start_cssr_demo.sh"
             )
 
             if not os.path.exists(script_path):
