@@ -455,10 +455,11 @@ class CSSRLauncherGUI:
                    ("camera node" in line_lower and "started" in line_lower):
                     self.update_status('camera', 'running')
 
-                # Face detection - look for confirmation it's actually publishing
-                if ("face detection node is running" in line_lower or
-                    ("facedetection" in line_lower and "started" in line_lower) or
-                    "/facedetection" in line_lower):
+                # Face detection - look for confirmation it's actually running
+                if ("face detection" in line_lower and any(kw in line_lower for kw in ["running", "started", "initialized", "ready"])) or \
+                   ("facedetection" in line_lower and any(kw in line_lower for kw in ["started", "running", "initialized", "ready", "successfully"])) or \
+                   ("/facedetection" in line_lower and "started" in line_lower) or \
+                   ("face_detection_node" in line_lower):
                     self.update_status('face_detection', 'running')
 
                 # Robot interface - look for naoqi driver confirmation
@@ -472,8 +473,13 @@ class CSSRLauncherGUI:
                    ("started" in line_lower or "running" in line_lower):
                     self.update_status('navigation', 'running')
 
-                # Behavior controller - look for actual start confirmation
-                if "behaviorcontroller" in line_lower and ("started" in line_lower or "running" in line_lower):
+                # Behavior controller - look for actual start confirmation or mission prompt
+                if ("behaviorcontroller" in line_lower or "behavior_controller" in line_lower or "behaviorcontrol" in line_lower) and \
+                   any(kw in line_lower for kw in ["started", "running", "initialized", "ready", "successfully"]):
+                    self.update_status('behavior_controller', 'running')
+
+                # Also detect behavior controller when mission start prompt appears
+                if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
                     self.update_status('behavior_controller', 'running')
 
             process.wait()
