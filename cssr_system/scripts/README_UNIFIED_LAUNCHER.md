@@ -300,12 +300,22 @@ sudo apt-get install python3-tk
 pip3 install tk
 ```
 
-**Problem:** GUI shows but START button doesn't work
+**Problem:** GUI shows but START button doesn't work / "Script not found" error
 
 **Solution:**
-- Check the script paths in `cssr_launcher_gui.py` (line ~390)
-- Ensure `start_computer_v2_remote.sh` exists and is executable
-- Check log window for error messages
+- **IMPORTANT**: `start_cssr_demo.sh` must be in the SAME folder as `cssr_launcher_gui.py`
+- The GUI will automatically try to make the script executable
+- Check the log window - it shows the exact path being searched and lists all files in the directory
+- If script is found but not executable, manually run: `chmod +x start_cssr_demo.sh`
+- If script is not found, verify both files are in the same directory:
+  ```bash
+  # Find both files
+  find ~ -name "cssr_launcher_gui.py" -o -name "start_cssr_demo.sh"
+
+  # They should be in the same directory
+  # Move the script if needed:
+  mv start_cssr_demo.sh /path/to/same/folder/as/gui/
+  ```
 
 **Problem:** Desktop icon doesn't launch GUI
 

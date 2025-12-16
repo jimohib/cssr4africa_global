@@ -323,14 +323,38 @@ class CSSRLauncherGUI:
             launch_controller = str(self.config['launch_controller'].get()).lower()
 
             # Build launch command
-            script_path = os.path.join(
-                os.path.dirname(__file__),
-                "start_cssr_demo.sh"
-            )
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            script_path = os.path.join(script_dir, "start_cssr_demo.sh")
 
-            if not os.path.exists(script_path):
+            # Debug logging
+            self.log(f"Script directory: {script_dir}")
+            self.log(f"Looking for script at: {script_path}")
+            self.log(f"Script exists: {os.path.exists(script_path)}")
+
+            if os.path.exists(script_path):
+                # Check if script is executable
+                if not os.access(script_path, os.X_OK):
+                    self.log(f"WARNING: Script is not executable: {script_path}", "WARN")
+                    self.log("Attempting to make it executable...", "INFO")
+                    try:
+                        os.chmod(script_path, 0o755)
+                        self.log("✓ Script made executable", "SUCCESS")
+                    except Exception as e:
+                        self.log(f"ERROR: Failed to make script executable: {e}", "ERROR")
+                        messagebox.showerror("Error", f"Script is not executable and cannot be fixed!\n{script_path}\n\nRun: chmod +x {script_path}")
+                        self.is_running = False
+                        self.start_button.config(state=tk.NORMAL)
+                        self.stop_button.config(state=tk.DISABLED)
+                        return
+            else:
                 self.log(f"ERROR: Script not found: {script_path}", "ERROR")
-                messagebox.showerror("Error", f"Launch script not found!\n{script_path}")
+                self.log(f"Files in {script_dir}:", "INFO")
+                try:
+                    for f in os.listdir(script_dir):
+                        self.log(f"  - {f}", "INFO")
+                except Exception as e:
+                    self.log(f"Cannot list directory: {e}", "ERROR")
+                messagebox.showerror("Error", f"Launch script not found!\n{script_path}\n\nMake sure start_cssr_demo.sh is in the same folder as cssr_launcher_gui.py")
                 self.is_running = False
                 self.start_button.config(state=tk.NORMAL)
                 self.stop_button.config(state=tk.DISABLED)
