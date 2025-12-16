@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-CSSR System - Graphical Launcher Interface
+CSSR4Africa System - Graphical Launcher Interface
 
-A user-friendly GUI for launching the CSSR robot system.
-Can be used by anyone without command-line knowledge.
+A user-friendly GUI for launching the CSSR4Africa robot system.
+
+Author: Ibrahim Jimoh
+Email: ioj@andrew.cmu.edu
+Date: 2025-12-12
 
 Requirements:
     pip install tkinter paramiko
@@ -21,7 +24,7 @@ import sys
 class CSSRLauncherGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CSSR System Launcher")
+        self.root.title("CSSR4Africa System Launcher")
         self.root.geometry("900x700")
         self.root.resizable(True, True)
 
@@ -31,15 +34,15 @@ class CSSRLauncherGUI:
 
         # Configuration
         self.config = {
-            'jetson_ip': tk.StringVar(value="172.29.111.240"),
-            'computer_ip': tk.StringVar(value="172.29.111.237"),
+            'jetson_ip': tk.StringVar(value="172.29.111.248"),
+            'computer_ip': tk.StringVar(value="172.29.111.245"),
             'robot_ip': tk.StringVar(value="172.29.111.230"),
             'launch_controller': tk.BooleanVar(value=True),
             'control_from': tk.StringVar(value="computer"),
         }
 
         self.create_widgets()
-        self.log("CSSR System Launcher initialized")
+        self.log("CSSR4Africa System Launcher initialized")
         self.log(f"Current user: {os.getenv('USER', 'unknown')}")
         self.log(f"Current host: {socket.gethostname()}")
 
@@ -53,7 +56,7 @@ class CSSRLauncherGUI:
 
         title_label = tk.Label(
             header_frame,
-            text="CSSR System Launcher",
+            text="CSSR4Africa System Launcher",
             font=("TkDefaultFont", 18, "bold"),
             bg="#2c3e50",
             fg="white"
@@ -322,7 +325,7 @@ class CSSRLauncherGUI:
             # Build launch command
             script_path = os.path.join(
                 os.path.dirname(__file__),
-                "start_computer_v2_remote.sh"
+                "start_cssr_demo.sh"
             )
 
             if not os.path.exists(script_path):
