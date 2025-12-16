@@ -176,10 +176,19 @@ class CSSRLauncherGUI:
             height=15,
             font=("TkFixedFont", 9),
             bg="#1e1e1e",
-            fg="#00ff00",
-            insertbackground="white"
+            fg="#cccccc",
+            insertbackground="white",
+            wrap=tk.WORD
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
+
+        # Configure text tags for different log levels with colors
+        self.log_text.tag_config("INFO", foreground="#00bfff")      # Light blue
+        self.log_text.tag_config("SUCCESS", foreground="#00ff00")   # Green
+        self.log_text.tag_config("WARN", foreground="#ffa500")      # Orange
+        self.log_text.tag_config("WARNING", foreground="#ffa500")   # Orange
+        self.log_text.tag_config("ERROR", foreground="#ff4444")     # Red
+        self.log_text.tag_config("DEBUG", foreground="#888888")     # Dark gray
 
         # Clear log button
         clear_log_btn = ttk.Button(log_frame, text="Clear Log", command=self.clear_log)
@@ -208,11 +217,12 @@ class CSSRLauncherGUI:
         self.footer_status.pack(side=tk.RIGHT, padx=10)
 
     def log(self, message, level="INFO"):
-        """Add message to log window"""
+        """Add message to log window with appropriate color based on level"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}] [{level}] {message}\n"
 
-        self.log_text.insert(tk.END, formatted_message)
+        # Insert with tag for color coding
+        self.log_text.insert(tk.END, formatted_message, level)
         self.log_text.see(tk.END)
         self.log_text.update()
 
