@@ -367,7 +367,9 @@ class CSSRLauncherGUI:
                 self.log(line.strip())
 
                 # Auto-send Enter when behaviorController prompts for mission start
-                if "press enter" in line.lower() and "start" in line.lower():
+                # Detects patterns like: "Press Enter to start", "Press 'Enter' to start", etc.
+                line_lower = line.lower()
+                if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
                     self.log("=" * 60, "INFO")
                     self.log("Detected mission start prompt", "INFO")
                     self.log("Auto-starting mission...", "INFO")
