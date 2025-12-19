@@ -20,6 +20,7 @@ import os
 import socket
 from datetime import datetime
 import sys
+import re
 
 class CSSRLauncherGUI:
     def __init__(self, root):
@@ -236,6 +237,12 @@ class CSSRLauncherGUI:
         """Clear the log window"""
         self.log_text.delete(1.0, tk.END)
 
+    @staticmethod
+    def strip_ansi_codes(text):
+        """Remove ANSI color codes from text"""
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return ansi_escape.sub('', text)
+
     def update_status(self, component, status):
         """Update status indicator
 
@@ -404,8 +411,8 @@ class CSSRLauncherGUI:
 
             # Stream output to log
             for line in process.stdout:
-                # Auto-detect log level from ROS messages
-                line_stripped = line.strip()
+                # Strip ANSI color codes and whitespace
+                line_stripped = self.strip_ansi_codes(line).strip()
                 if not line_stripped:
                     continue
 
