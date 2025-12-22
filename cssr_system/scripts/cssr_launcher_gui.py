@@ -9,7 +9,7 @@ Email: ioj@andrew.cmu.edu
 Date: 2025-12-12
 
 Requirements:
-    pip install tkinter paramiko
+    pip install tk
 """
 
 import tkinter as tk
@@ -25,7 +25,7 @@ import re
 class CSSRLauncherGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("CSSR4Africa System Launcher")
+        self.root.title("CSSR4Africa System")
         self.root.geometry("900x700")
         self.root.resizable(True, True)
 
@@ -105,17 +105,17 @@ class CSSRLauncherGUI:
         self.status_labels = {}
         status_items = [
             ("ROS Master", "roscore"),
+            ("Robot Interface", "robot_interface"),
             ("Camera", "camera"),
             ("Face Detection", "face_detection"),
-            ("Sound Detection", "sound_detection"),
-            ("Person Detection", "person_detection"),
-            ("Speech Event", "speech_event"),
-            ("Text to Speech", "text_to_speech"),
-            ("Robot Interface", "robot_interface"),
             ("Robot Localization", "robot_localization"),
             ("Robot Navigation", "robot_navigation"),
-            ("Behavior Controller", "behavior_controller"),
-            ("Gesture Execution", "gesture_execution")
+            ("Sound Detection", "sound_detection"),
+            ("Text to Speech", "text_to_speech"),
+            ("Overt Attention", "overt_attention"),
+            ("Gesture Execution", "gesture_execution"),
+            ("Speech Event", "speech_event"),
+            ("Behavior Controller", "behavior_controller")
         ]
 
         for idx, (label, key) in enumerate(status_items):
@@ -248,7 +248,7 @@ class CSSRLauncherGUI:
 
         Args:
             component: Component key (e.g., 'roscore', 'camera')
-            status: 'running', 'stopped', 'error'
+            status: 'running', 'stopped', 'error', 'starting'
         """
         if component not in self.status_labels:
             return
@@ -281,7 +281,7 @@ class CSSRLauncherGUI:
             if not messagebox.askyesno("Warning", f"Cannot reach Jetson at {jetson_ip}\nContinue anyway?"):
                 return False
         else:
-            self.log("✓ Jetson is reachable", "SUCCESS")
+            self.log("Jetson is reachable", "SUCCESS")
 
         # Check 2: Ping Robot
         robot_ip = self.config['robot_ip'].get()
@@ -298,7 +298,7 @@ class CSSRLauncherGUI:
             if not messagebox.askyesno("Warning", f"Cannot reach Robot at {robot_ip}\nContinue anyway?"):
                 return False
         else:
-            self.log("✓ Robot is reachable", "SUCCESS")
+            self.log("Robot is reachable", "SUCCESS")
 
         # Check 3: ROS environment
         self.log("Checking ROS environment...")
@@ -307,9 +307,9 @@ class CSSRLauncherGUI:
             messagebox.showerror("Error", "ROS Noetic is not installed!")
             return False
         else:
-            self.log("✓ ROS Noetic found", "SUCCESS")
+            self.log("ROS Noetic found", "SUCCESS")
 
-        self.log("✓ All pre-flight checks passed", "SUCCESS")
+        self.log("All pre-flight checks passed", "SUCCESS")
         return True
 
     def start_system(self):
@@ -361,7 +361,7 @@ class CSSRLauncherGUI:
                     self.log("Attempting to make it executable...", "INFO")
                     try:
                         os.chmod(script_path, 0o755)
-                        self.log("✓ Script made executable", "SUCCESS")
+                        self.log("Script made executable", "SUCCESS")
                     except Exception as e:
                         self.log(f"ERROR: Failed to make script executable: {e}", "ERROR")
                         messagebox.showerror("Error", f"Script is not executable and cannot be fixed!\n{script_path}\n\nRun: chmod +x {script_path}")
@@ -427,7 +427,7 @@ class CSSRLauncherGUI:
                     level = "WARN"
                 elif "[info]" in line_lower or "info:" in line_lower:
                     level = "INFO"
-                elif "success" in line_lower or "✓" in line_stripped:
+                elif "[success]" in line_lower or "success" in line_lower:
                     level = "SUCCESS"
                 elif "[debug]" in line_lower:
                     level = "DEBUG"
@@ -440,12 +440,12 @@ class CSSRLauncherGUI:
                 # Detects patterns like: "Press Enter to start", "Press 'Enter' to start", etc.
                 if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
                     self.log("=" * 60, "INFO")
-                    self.log("Detected mission start prompt", "INFO")
-                    self.log("Auto-starting mission...", "INFO")
+                    self.log("Detected mission start prompt", "SUCCESS")
+                    self.log("Auto-starting mission...", "SUCCESS")
                     try:
                         process.stdin.write("\n")
                         process.stdin.flush()
-                        self.log("✓ Mission started automatically", "SUCCESS")
+                        self.log("Mission started automatically", "SUCCESS")
                     except Exception as e:
                         self.log(f"Failed to auto-start mission: {e}", "ERROR")
                     self.log("=" * 60, "INFO")
@@ -467,7 +467,7 @@ class CSSRLauncherGUI:
                         if restart:
                             process.stdin.write("y\n")
                             process.stdin.flush()
-                            self.log("✓ Mission restarting...", "SUCCESS")
+                            self.log("Mission restarting...", "SUCCESS")
                         else:
                             process.stdin.write("n\n")
                             process.stdin.flush()
@@ -476,8 +476,39 @@ class CSSRLauncherGUI:
                         self.log(f"Failed to send restart response: {e}", "ERROR")
                     self.log("=" * 60, "INFO")
 
-                # Update status indicators based on actual heartbeat messages
-                # Heartbeat format: "<nodeName>: running" or "<nodeName>: running."
+                # Update status indicators based on node messages
+                # Startup format: "<nodeName>: startup." or "<nodeName>: start-up"
+                # Running format: "<nodeName>: running" or "<nodeName>: running."
+
+                # Detect STARTUP messages first (orange indicators)
+                if "facedetection: startup" in line_lower or "facedetection: start-up" in line_lower:
+                    self.update_status('face_detection', 'starting')
+
+                if "sounddetection: startup" in line_lower or "sounddetection: start-up" in line_lower:
+                    self.update_status('sound_detection', 'starting')
+
+                if "speechevent: startup" in line_lower or "speechevent: start-up" in line_lower:
+                    self.update_status('speech_event', 'starting')
+
+                if "texttospeech: startup" in line_lower or "texttospeech: start-up" in line_lower:
+                    self.update_status('text_to_speech', 'starting')
+
+                if "robotlocalization: startup" in line_lower or "robotlocalization: start-up" in line_lower:
+                    self.update_status('robot_localization', 'starting')
+
+                if "robotnavigation: startup" in line_lower or "robotnavigation: start-up" in line_lower:
+                    self.update_status('robot_navigation', 'starting')
+
+                if "overtattention: startup" in line_lower or "overtattention: start-up" in line_lower:
+                    self.update_status('overt_attention', 'starting')
+
+                if "gestureexecution: startup" in line_lower or "gestureexecution: start-up" in line_lower:
+                    self.update_status('gesture_execution', 'starting')
+
+                if "behaviorcontroller: startup" in line_lower or "behaviorcontroller: start-up" in line_lower:
+                    self.update_status('behavior_controller', 'starting')
+
+                # Detect RUNNING messages (green indicators)
 
                 # roscore - look for connection confirmation
                 if ("connected to roscore" in line_lower or
@@ -497,10 +528,6 @@ class CSSRLauncherGUI:
                 # Sound Detection - actual heartbeat: "soundDetection: running."
                 if "sounddetection: running" in line_lower:
                     self.update_status('sound_detection', 'running')
-
-                # Person Detection - actual heartbeat: "personDetection: running."
-                if "persondetection: running" in line_lower:
-                    self.update_status('person_detection', 'running')
 
                 # Speech Event - actual heartbeat: "speechEvent: running"
                 if "speechevent: running" in line_lower:
@@ -524,13 +551,17 @@ class CSSRLauncherGUI:
                 if "robotnavigation: running" in line_lower:
                     self.update_status('robot_navigation', 'running')
 
-                # Behavior Controller - actual heartbeat: "behaviorController: running"
-                if "behaviorcontroller: running" in line_lower:
-                    self.update_status('behavior_controller', 'running')
+                # Overt Attention - actual heartbeat: "overtAttention: running."
+                if "overtattention: running" in line_lower:
+                    self.update_status('overt_attention', 'running')
 
                 # Gesture Execution - actual heartbeat: "gestureExecution: running..."
                 if "gestureexecution: running" in line_lower:
                     self.update_status('gesture_execution', 'running')
+
+                # Behavior Controller - actual heartbeat: "behaviorController: running"
+                if "behaviorcontroller: running" in line_lower:
+                    self.update_status('behavior_controller', 'running')
 
                 # Also detect behavior controller when mission start prompt appears
                 if "press" in line_lower and "enter" in line_lower and "start" in line_lower:
