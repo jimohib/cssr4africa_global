@@ -383,7 +383,9 @@ class CSSRLauncherGUI:
                 self.stop_button.config(state=tk.DISABLED)
                 return
 
+            # Use stdbuf to disable output buffering for real-time log display
             cmd = [
+                'stdbuf', '-oL', '-eL',  # Line-buffered stdout and stderr
                 script_path,
                 f"--jetson-ip={jetson_ip}",
                 f"--computer-ip={computer_ip}",
@@ -391,13 +393,14 @@ class CSSRLauncherGUI:
                 f"--launch-controller={launch_controller}"
             ]
 
-            self.log(f"Launching: {' '.join(cmd)}")
+            self.log(f"Launching: {' '.join(cmd[3:])}")  # Don't show stdbuf in log
 
             # Update status indicators
             self.update_status('roscore', 'starting')
             self.update_status('camera', 'starting')
 
             # Launch process with stdin enabled for auto-starting mission
+            # Using stdbuf ensures real-time output without buffering delays
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
