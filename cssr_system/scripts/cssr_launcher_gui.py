@@ -422,7 +422,7 @@ class CSSRLauncherGUI:
                 # Detect log level from message content
                 line_lower = line_stripped.lower()
                 # Check for WARNING first before ERROR (some warnings contain "error" in text)
-                if "[warn]" in line_lower or "warning:" in line_lower or "[warning]" in line_lower:
+                if "[warn]" in line_lower or "warning:" in line_lower or "[warning]" in line_lower or " warning " in line_lower or line_lower.startswith("warning "):
                     level = "WARN"
                 elif "[error]" in line_lower or "error:" in line_lower:
                     level = "ERROR"
