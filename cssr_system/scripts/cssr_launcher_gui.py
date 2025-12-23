@@ -517,10 +517,13 @@ class CSSRLauncherGUI:
                     "roscore is running" in line_lower):
                     self.update_status('roscore', 'running')
 
-                # Camera - look for successful initialization
-                if ("realsense" in line_lower and ("started" in line_lower or "running" in line_lower)) or \
-                   ("camera node" in line_lower and "started" in line_lower):
+                # Camera - look for successful hardware detection (not just node starting)
+                # "RealSense Node Is Up!" confirms camera hardware is actually connected
+                if "realsense node is up" in line_lower:
                     self.update_status('camera', 'running')
+                # Check for "No RealSense devices were found" to detect camera failure
+                elif "no realsense devices were found" in line_lower:
+                    self.update_status('camera', 'error')
 
                 # Face Detection - actual heartbeat: "faceDetection: running."
                 if "facedetection: running" in line_lower:
